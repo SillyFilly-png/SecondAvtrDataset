@@ -1,3 +1,4 @@
+<!-- /index.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,18 +7,10 @@
 <title>VRC Search</title>
 
 <style>
-body {
-  background:#050505;
-  color:#fff;
-  font-family:sans-serif;
-  padding:15px;
-}
+body { background:#050505; color:#fff; font-family:sans-serif; padding:15px; }
+.wrap { max-width:1100px; margin:auto; }
 
-.input-wrap {
-  display:flex;
-  gap:8px;
-}
-
+.input { display:flex; gap:8px; }
 input {
   flex:1;
   padding:12px;
@@ -26,27 +19,22 @@ input {
   background:#111;
   color:#fff;
 }
-
 button {
   padding:12px;
-  background:#007bff;
   border:none;
   border-radius:10px;
+  background:#007bff;
   color:white;
   font-weight:bold;
   cursor:pointer;
 }
 
-#status {
-  margin-top:15px;
-  text-align:center;
-  color:#888;
-}
+#status { margin-top:10px; color:#888; text-align:center; }
 
 .grid {
   margin-top:15px;
   display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
   gap:12px;
 }
 
@@ -62,14 +50,13 @@ button {
   border-radius:8px;
 }
 
-.name {
-  font-size:13px;
-  font-weight:bold;
-  margin:8px 0;
-}
+.name { font-weight:bold; margin:6px 0; font-size:14px; }
+.author { font-size:12px; color:#aaa; }
 
-.copy {
-  width:100%;
+.btns { display:flex; gap:6px; margin-top:6px; }
+
+.small {
+  flex:1;
   padding:8px;
   background:#222;
   border:1px solid #444;
@@ -81,14 +68,17 @@ button {
 </head>
 
 <body>
+<div class="wrap">
 
-<div class="input-wrap">
+<div class="input">
   <input id="q" placeholder="Search avatar...">
   <button onclick="search()">Search</button>
 </div>
 
 <div id="status">Ready</div>
 <div id="results" class="grid"></div>
+
+</div>
 
 <script>
 async function search() {
@@ -117,23 +107,36 @@ async function search() {
       div.className = "card";
 
       div.innerHTML = `
-        <img src="${a.image || ""}">
+        <img src="${a.image}">
         <div class="name">${a.name}</div>
-        <button class="copy" onclick="copyID('${a.id}', this)">COPY ID</button>
+        <div class="author">${a.author}</div>
+        <div class="btns">
+          <button class="small" onclick="copy('${a.id}', this)">COPY</button>
+          <button class="small" onclick="save('${encodeURIComponent(JSON.stringify(a))}', this)">SAVE</button>
+        </div>
       `;
 
       results.appendChild(div);
     });
 
-  } catch (err) {
-    status.innerText = "Error loading data.";
+  } catch {
+    status.innerText = "Error";
   }
 }
 
-function copyID(id, btn) {
+function copy(id, btn) {
   navigator.clipboard.writeText(id);
-  btn.innerText = "COPIED!";
-  setTimeout(() => btn.innerText = "COPY ID", 1000);
+  btn.innerText = "DONE";
+  setTimeout(()=>btn.innerText="COPY",1000);
+}
+
+function save(data, btn) {
+  const arr = JSON.parse(localStorage.getItem("fav") || "[]");
+  arr.push(JSON.parse(decodeURIComponent(data)));
+  localStorage.setItem("fav", JSON.stringify(arr));
+
+  btn.innerText = "SAVED";
+  setTimeout(()=>btn.innerText="SAVE",1000);
 }
 </script>
 
