@@ -1,52 +1,49 @@
-<script>
-    async function go() {
-        const q = document.getElementById('i').value.trim();
-        const st = document.getElementById('st');
-        const out = document.getElementById('out');
-        if(!q) return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VRC Search S25U</title>
+    <style>
+        body { background: #050505; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; }
+        .bar { display: flex; gap: 8px; position: sticky; top: 10px; z-index: 100; margin-bottom: 20px; background: #050505; padding: 5px 0; }
+        input { flex: 1; padding: 15px; border-radius: 12px; border: 1px solid #333; background: #111; color: white; font-size: 16px; outline: none; }
+        button { padding: 0 20px; border-radius: 12px; border: none; background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+        .card { background: #111; border-radius: 12px; border: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
+        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #000; }
+        .p { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .n { font-size: 0.75rem; font-weight: bold; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .copy { width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #333; color: #58a6ff; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.7rem; }
+        #st { text-align: center; color: #666; margin-top: 40px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
 
-        st.innerText = "Connecting to 2026 VRC Index...";
-        out.innerHTML = "";
+    <div class="bar">
+        <input type="text" id="i" placeholder="Search avatar names..." onkeypress="if(event.key==='Enter') run()">
+        <button onclick="run()">SCAN</button>
+    </div>
 
-        // This uses AllOrigins to wrap the request and hide it from CORS blocks
-        const api = `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`;
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(api)}`;
+    <div id="st">Ready.</div>
+    <div class="grid" id="out"></div>
 
-        try {
-            const r = await fetch(proxyUrl);
-            const wrapper = await r.json();
-            const data = JSON.parse(wrapper.contents); // AllOrigins wraps data in a 'contents' string
+    <script>
+        async function run() {
+            const q = document.getElementById('i').value.trim();
+            if(!q) return;
+            const out = document.getElementById('out');
+            const st = document.getElementById('st');
+            
+            out.innerHTML = "";
+            st.innerText = "Tunnelling to Database...";
 
-            const results = Array.isArray(data) ? data : (data.results || []);
+            const target = `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`;
+            const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`;
 
-            if (results.length === 0) {
-                st.innerText = "No avatars found for that name.";
-                return;
-            }
-
-            st.innerText = "";
-            results.forEach(a => {
-                const el = document.createElement('div');
-                el.className = 'card';
-                el.innerHTML = `
-                    <img src="${a.thumbnailImageUrl || a.imageUrl || ''}" onerror="this.src='https://placehold.co/200?text=No+Image'">
-                    <div style="padding:10px;">
-                        <div style="font-size:12px; font-weight:bold; margin-bottom:5px; overflow:hidden;">${a.name}</div>
-                        <button class="copy" onclick="cp('${a.id}', this)" style="width:100%; padding:8px; background:#222; color:#58a6ff; border:1px solid #333; border-radius:6px; font-size:11px;">COPY ID</button>
-                    </div>`;
-                out.appendChild(el);
-            });
-        } catch (e) {
-            st.innerText = "Search Failed. Database is currently rate-limited.";
-            console.error(e);
-        }
-    }
-
-    function cp(id, b) {
-        navigator.clipboard.writeText(id).then(() => {
-            const old = b.innerText;
-            b.innerText = "COPIED!";
-            setTimeout(() => b.innerText = old, 1000);
-        });
-    }
-</script>
+            try {
+                const response = await fetch(proxy);
+                const wrapper = await response.json();
+                
+                // AllOrigins returns the string inside 'contents'
+                const data = JSON.parse(wrapper
