@@ -18,10 +18,10 @@ export default async function handler(req, res) {
 
     const text = await r.text();
 
-    // detect non-json responses
+    // If not JSON, stop here
     if (!text.trim().startsWith("{") && !text.trim().startsWith("[")) {
-      return res.status(500).json({
-        error: "AVTRDB did not return JSON",
+      return res.status(502).json({
+        error: "Upstream did not return JSON",
         preview: text.slice(0, 200)
       });
     }
@@ -30,8 +30,8 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(text);
     } catch {
-      return res.status(500).json({
-        error: "Invalid JSON parse",
+      return res.status(502).json({
+        error: "JSON parse failed",
         preview: text.slice(0, 200)
       });
     }
