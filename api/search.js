@@ -8,11 +8,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(
       `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`,
-      {
-        headers: {
-          "accept": "application/json"
-        }
-      }
+      { headers: { "accept": "application/json" } }
     );
 
     const text = await r.text();
@@ -21,7 +17,7 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(text);
     } catch {
-      return res.status(500).json({ error: "Bad JSON from AVTRDB", raw: text });
+      return res.status(500).json({ error: "Invalid JSON", raw: text });
     }
 
     const items = Array.isArray(data) ? data : (data.results || []);
