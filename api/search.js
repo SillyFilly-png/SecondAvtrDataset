@@ -1,36 +1,41 @@
-// /api/search.js
-const AVTRDB_BASE = "https://api.avtrdb.com/v2/avatar/search/vrcx?search=";
+export default async function handler(req, res) {
+  const { q } = req.query;
 
-function getInt(value, fallback, min, max) {
-  const n = Number.parseInt(String(value ?? ""), 10);
-  if (Number.isNaN(n)) return fallback;
-  return Math.max(min, Math.min(max, n));
-}
-
-async function fetchJson(url, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  if (!q) {
+    return res.status(400).json({ error: "Missing query" });
+  }
 
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "accept": "application/json, text/plain, */*",
-        "user-agent": "VRC-Search/1.0"
+    const r = await fetch(
+      `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`,
+      {
+        headers: {
+          "accept": "application/json"
+        }
       }
-    });
+    );
 
-    const text = await res.text();
-    if (!res.ok) throw new Error(`Upstream ${res.status}`);
+    const text = await r.text();
 
-    return JSON.parse(text);
-  } finally {
-    clearTimeout(timer);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return res.status(500).json({ error: "Bad JSON from AVTRDB", raw: text });
+    }
+
+    const items = Array.isArray(data) ? data : (data.results || []);
+
+    const cleaned = items.map(a => ({
+      id: a.id || "",
+      name: a.name || "Untitled",
+      author: a.authorName || "Unknown",
+      image: a.thumbnailImageUrl || ""
+    }));
+
+    res.status(200).json(cleaned);
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 }
-
-function normalize(item) {
-  return {
-    id: item.id || item.avatarId || "",
-    name: item.name || item.avatarName || "Untitled",
-    author
