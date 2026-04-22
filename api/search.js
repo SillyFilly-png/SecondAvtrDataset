@@ -1,30 +1,28 @@
 export default async function handler(req, res) {
-  const { query } = req.query;
+  const { q } = req.query;
+
+  if (!q) {
+    return res.status(400).json({ error: "Missing query" });
+  }
 
   try {
-    // Example sources (replace with real endpoints)
-    const sources = [
-      fetch(`https://api.avtrdb.com/search?q=${query}`).then(r => r.json()),
-      fetch(`https://api.avtr.zip/search?q=${query}`).then(r => r.json())
-    ];
+    const response = await fetch(
+      `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`
+    );
 
-    const results = await Promise.allSettled(sources);
+    const data = await response.json();
 
-    // Normalize results
-    const merged = results.flatMap(r => {
-      if (r.status !== "fulfilled") return [];
+    // Normalize structure
+    const items = Array.isArray(data) ? data : (data.results || []);
 
-      return r.value.map(item => ({
-        name: item.name || item.title,
-        image: item.image || item.thumbnail,
-        author: item.author || "Unknown",
-        source: item.source || "unknown",
-        download: item.download || item.url
-      }));
-    });
+    const clean = items.map(a => ({
+      id: a.id,
+      name: a.name,
+      image: a.thumbnailImageUrl
+    }));
 
-    res.status(200).json(merged);
+    res.status(200).json(clean);
   } catch (err) {
-    res.status(500).json({ error: "Search failed" });
+    res.status(500).json({ error: "Failed to fetch avatars" });
   }
 }
