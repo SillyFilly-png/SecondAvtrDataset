@@ -1,88 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VRC Search v4</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRC SEARCH</title>
     <style>
-        body { background: #0b0e11; color: #adbac7; font-family: -apple-system, blinkmacsystemfont, 'Segoe UI', helvetica, arial, sans-serif; padding: 15px; margin: 0; }
-        .bar { display: flex; gap: 8px; position: sticky; top: 10px; z-index: 100; margin-bottom: 20px; }
-        input { flex: 1; padding: 14px; border-radius: 8px; border: 1px solid #444c56; background: #22272e; color: #adbac7; font-size: 16px; outline: none; }
-        button { padding: 0 20px; border-radius: 8px; border: none; background: #347d39; color: white; font-weight: bold; cursor: pointer; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-        .card { background: #22272e; border-radius: 10px; border: 1px solid #444c56; overflow: hidden; display: flex; flex-direction: column; }
-        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #000; }
-        .p { padding: 10px; }
-        .n { font-size: 0.8rem; font-weight: 600; margin-bottom: 10px; height: 2.4em; overflow: hidden; }
-        .copy { width: 100%; padding: 8px; background: #2d333b; border: 1px solid #444c56; color: #539bf5; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.7rem; }
-        #st { text-align: center; color: #768390; margin-top: 30px; }
+        body { background: #050505; color: #fff; font-family: sans-serif; padding: 15px; }
+        .input-wrap { display: flex; gap: 5px; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: #fff; outline: none; }
+        button { padding: 12px; background: #007bff; color: #fff; border: none; border-radius: 8px; font-weight: bold; }
+        .res { margin-top: 15px; padding: 10px; border: 1px solid #222; border-radius: 10px; background: #111; }
+        img { width: 100%; border-radius: 8px; margin-bottom: 10px; }
+        .name { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+        .cp { width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #58a6ff; border-radius: 5px; }
     </style>
 </head>
 <body>
-
-    <div class="bar">
-        <input type="text" id="i" placeholder="Search Avatars..." onkeypress="if(event.key==='Enter') run()">
-        <button onclick="run()">SCAN</button>
+    <div class="input-wrap">
+        <input type="text" id="q" placeholder="Avatar Name...">
+        <button onclick="search()">SCAN</button>
     </div>
-
-    <div id="st">Ready for Input</div>
-    <div class="grid" id="out"></div>
+    <div id="st" style="margin-top:15px; color:#777; text-align:center;">Ready</div>
+    <div id="list"></div>
 
     <script>
-        async function run() {
-            const i = document.getElementById('i');
-            const out = document.getElementById('out');
+        function search() {
+            const q = document.getElementById('q').value;
             const st = document.getElementById('st');
-            const q = i.value.trim();
-            
+            const list = document.getElementById('list');
             if(!q) return;
-            out.innerHTML = "";
-            st.innerHTML = "📡 <b>Connecting...</b>";
 
+            st.innerText = "Bypassing Firefox Shields...";
+            list.innerHTML = "";
+
+            const target = `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`;
+            
+            // Using AllOrigins "callback" method which Firefox's tracking protection often misses
+            const script = document.createElement('script');
+            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}&callback=handle`;
+            document.body.appendChild(script);
+        }
+
+        function handle(data) {
+            const st = document.getElementById('st');
+            const list = document.getElementById('list');
+            
             try {
-                const target = `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`;
-                const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`;
-                
-                const response = await fetch(proxy);
-                if (!response.ok) throw new Error('Proxy Offline');
-                
-                const wrapper = await response.json();
-                if (!wrapper.contents) throw new Error('Empty Response');
-                
-                const data = JSON.parse(wrapper.contents);
-                const results = Array.isArray(data) ? data : (data.results || []);
+                const results = JSON.parse(data.contents);
+                const items = Array.isArray(results) ? results : (results.results || []);
 
-                if (results.length === 0) {
+                if(items.length === 0) {
                     st.innerText = "No avatars found.";
                     return;
                 }
 
                 st.innerText = "";
-                results.forEach(a => {
+                items.forEach(a => {
                     const div = document.createElement('div');
-                    div.className = 'card';
+                    div.className = 'res';
                     div.innerHTML = `
-                        <img src="${a.thumbnailImageUrl || a.imageUrl || ''}" onerror="this.src='https://placehold.co/200?text=No+Preview'">
-                        <div class="p">
-                            <div class="n">${a.name || 'Unnamed'}</div>
-                            <button class="copy" onclick="cp('${a.id}', this)">COPY ID</button>
-                        </div>`;
-                    out.appendChild(div);
+                        <img src="${a.thumbnailImageUrl || ''}">
+                        <div class="name">${a.name}</div>
+                        <button class="cp" onclick="copy('${a.id}', this)">COPY ID</button>
+                    `;
+                    list.appendChild(div);
                 });
-
-            } catch (err) {
-                st.innerHTML = `<span style="color:#ff6b6b">Error: ${err.message}</span><br><small>Try again in 5 seconds.</small>`;
-                console.error(err);
+            } catch (e) {
+                st.innerText = "Error: Database returned invalid data.";
             }
         }
 
-        function cp(id, btn) {
+        function copy(id, btn) {
             navigator.clipboard.writeText(id).then(() => {
-                const old = btn.innerText;
                 btn.innerText = "COPIED!";
-                setTimeout(() => { btn.innerText = old; }, 1000);
-            }).catch(() => {
-                alert(id); // Backup if clipboard fails on mobile
+                setTimeout(() => btn.innerText = "COPY ID", 1000);
             });
         }
     </script>
