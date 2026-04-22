@@ -1,81 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VRC SEARCH</title>
-    <style>
-        body { background: #050505; color: #fff; font-family: sans-serif; padding: 15px; }
-        .input-wrap { display: flex; gap: 5px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: #fff; outline: none; }
-        button { padding: 12px; background: #007bff; color: #fff; border: none; border-radius: 8px; font-weight: bold; }
-        .res { margin-top: 15px; padding: 10px; border: 1px solid #222; border-radius: 10px; background: #111; }
-        img { width: 100%; border-radius: 8px; margin-bottom: 10px; }
-        .name { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
-        .cp { width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #58a6ff; border-radius: 5px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRC Search</title>
+
+<style>
+body {
+  background:#050505;
+  color:#fff;
+  font-family:sans-serif;
+  padding:15px;
+}
+
+.input-wrap {
+  display:flex;
+  gap:8px;
+}
+
+input {
+  flex:1;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #333;
+  background:#111;
+  color:#fff;
+}
+
+button {
+  padding:12px;
+  background:#007bff;
+  border:none;
+  border-radius:10px;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#status {
+  margin-top:15px;
+  text-align:center;
+  color:#888;
+}
+
+.grid {
+  margin-top:15px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  gap:12px;
+}
+
+.card {
+  background:#111;
+  border:1px solid #222;
+  border-radius:12px;
+  padding:10px;
+}
+
+.card img {
+  width:100%;
+  border-radius:8px;
+}
+
+.name {
+  font-size:13px;
+  font-weight:bold;
+  margin:8px 0;
+}
+
+.copy {
+  width:100%;
+  padding:8px;
+  background:#222;
+  border:1px solid #444;
+  color:#58a6ff;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
 </head>
+
 <body>
-    <div class="input-wrap">
-        <input type="text" id="q" placeholder="Avatar Name...">
-        <button onclick="search()">SCAN</button>
-    </div>
-    <div id="st" style="margin-top:15px; color:#777; text-align:center;">Ready</div>
-    <div id="list"></div>
 
-    <script>
-        function search() {
-            const q = document.getElementById('q').value;
-            const st = document.getElementById('st');
-            const list = document.getElementById('list');
-            if(!q) return;
+<div class="input-wrap">
+  <input id="q" placeholder="Search avatar...">
+  <button onclick="search()">Search</button>
+</div>
 
-            st.innerText = "Bypassing Firefox Shields...";
-            list.innerHTML = "";
+<div id="status">Ready</div>
+<div id="results" class="grid"></div>
 
-            const target = `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`;
-            
-            // Using AllOrigins "callback" method which Firefox's tracking protection often misses
-            const script = document.createElement('script');
-            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}&callback=handle`;
-            document.body.appendChild(script);
-        }
+<script>
+async function search() {
+  const q = document.getElementById("q").value;
+  const status = document.getElementById("status");
+  const results = document.getElementById("results");
 
-        function handle(data) {
-            const st = document.getElementById('st');
-            const list = document.getElementById('list');
-            
-            try {
-                const results = JSON.parse(data.contents);
-                const items = Array.isArray(results) ? results : (results.results || []);
+  if (!q) return;
 
-                if(items.length === 0) {
-                    st.innerText = "No avatars found.";
-                    return;
-                }
+  status.innerText = "Searching...";
+  results.innerHTML = "";
 
-                st.innerText = "";
-                items.forEach(a => {
-                    const div = document.createElement('div');
-                    div.className = 'res';
-                    div.innerHTML = `
-                        <img src="${a.thumbnailImageUrl || ''}">
-                        <div class="name">${a.name}</div>
-                        <button class="cp" onclick="copy('${a.id}', this)">COPY ID</button>
-                    `;
-                    list.appendChild(div);
-                });
-            } catch (e) {
-                st.innerText = "Error: Database returned invalid data.";
-            }
-        }
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
 
-        function copy(id, btn) {
-            navigator.clipboard.writeText(id).then(() => {
-                btn.innerText = "COPIED!";
-                setTimeout(() => btn.innerText = "COPY ID", 1000);
-            });
-        }
-    </script>
+    if (!data.length) {
+      status.innerText = "No results.";
+      return;
+    }
+
+    status.innerText = "";
+
+    data.forEach(a => {
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <img src="${a.image || ""}">
+        <div class="name">${a.name}</div>
+        <button class="copy" onclick="copyID('${a.id}', this)">COPY ID</button>
+      `;
+
+      results.appendChild(div);
+    });
+
+  } catch (err) {
+    status.innerText = "Error loading data.";
+  }
+}
+
+function copyID(id, btn) {
+  navigator.clipboard.writeText(id);
+  btn.innerText = "COPIED!";
+  setTimeout(() => btn.innerText = "COPY ID", 1000);
+}
+</script>
+
 </body>
 </html>
