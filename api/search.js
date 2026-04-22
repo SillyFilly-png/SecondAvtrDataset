@@ -8,30 +8,46 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(
       `https://api.avtrdb.com/v2/avatar/search?query=${encodeURIComponent(q)}`,
-      { headers: { "accept": "application/json" } }
+      {
+        headers: {
+          "accept": "application/json",
+          "user-agent": "Mozilla/5.0"
+        }
+      }
     );
 
     const text = await r.text();
+
+    // detect non-json responses
+    if (!text.trim().startsWith("{") && !text.trim().startsWith("[")) {
+      return res.status(500).json({
+        error: "AVTRDB did not return JSON",
+        preview: text.slice(0, 200)
+      });
+    }
 
     let data;
     try {
       data = JSON.parse(text);
     } catch {
-      return res.status(500).json({ error: "Invalid JSON", raw: text });
+      return res.status(500).json({
+        error: "Invalid JSON parse",
+        preview: text.slice(0, 200)
+      });
     }
 
     const items = Array.isArray(data) ? data : (data.results || []);
 
-    const cleaned = items.map(a => ({
-      id: a.id || "",
-      name: a.name || "Untitled",
-      author: a.authorName || "Unknown",
-      image: a.thumbnailImageUrl || ""
-    }));
-
-    res.status(200).json(cleaned);
+    return res.status(200).json(
+      items.map(a => ({
+        id: a.id || "",
+        name: a.name || "Untitled",
+        author: a.authorName || "Unknown",
+        image: a.thumbnailImageUrl || ""
+      }))
+    );
 
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 }
