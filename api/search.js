@@ -12,17 +12,16 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Normalize structure
     const items = Array.isArray(data) ? data : (data.results || []);
 
-    const clean = items.map(a => ({
+    const cleaned = items.map(a => ({
       id: a.id,
       name: a.name,
       image: a.thumbnailImageUrl
     }));
 
-    res.status(200).json(clean);
+    res.status(200).json(cleaned);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch avatars" });
+    res.status(500).json({ error: "Search failed" });
   }
 }
